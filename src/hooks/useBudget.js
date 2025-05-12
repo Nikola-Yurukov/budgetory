@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { defaultBudget } from '../constants/budget';
+import { calculateTotals } from '../utils/budgetUtils';
 
 export const useBudget = () => {
   const [budget] = useState(defaultBudget);
