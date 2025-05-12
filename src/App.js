@@ -6,7 +6,7 @@ import { useBudget } from './hooks/useBudget';
 import { Toast } from './components/Toast';
 import { BudgetChart } from './components/BudgetChart';
 import { BudgetItem } from './components/BudgetItem';
-import { calculateTotals, formatCurrency, getDeltaPercent } from './utils/budgetUtils';
+import { calculateTotals, formatCurrency, getDeltaPercent, getEmoji } from './utils/budgetUtils';
 
 export default function BudgetTracker() {
   const {
