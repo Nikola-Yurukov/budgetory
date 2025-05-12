@@ -1,22 +1,29 @@
-import React, { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { signInWithEmailAndPassword, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 
 export function Login() {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [pass, setPass] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (user) navigate('/', { replace: true });
+    });
+    return () => unsub();
+  }, [navigate]);
+
   const handleLogin = async (e) => {
     e.preventDefault();
+    setError('');
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      navigate('/');
-    } catch (error) {
-      setError('Failed to login. Please check your credentials.');
-      console.error('Login error:', error);
+      await signInWithEmailAndPassword(auth, email, pass);
+      // Redirect handled by onAuthStateChanged
+    } catch (err) {
+      setError('Грешен имейл или парола.');
     }
   };
 
@@ -58,8 +65,8 @@ export function Login() {
                 required
                 className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Парола"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
               />
             </div>
           </div>
