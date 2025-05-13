@@ -30,11 +30,11 @@ export function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Вход в системата
-          </h2>
-        </div>
+      <div className="text-center">
+        <img src="/green-logo.png" alt="Budgetory Logo" className="mx-auto w-50 h-40 bg-white p-6 rounded-[40px] shadow-[0_4px_40px_rgba(0,0,0,0.1)]" />
+        <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Вход в системата
+        </h2>
+      </div>
         <form className="mt-8 space-y-6" onSubmit={handleLogin}>
           <div className="rounded-md shadow-sm -space-y-px">
             <div>
