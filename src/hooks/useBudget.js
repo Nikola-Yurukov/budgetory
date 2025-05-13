@@ -1,69 +1,60 @@
 import { useState, useEffect } from 'react';
-import { defaultBudget } from '../constants/budget';
 import { calculateTotals } from '../utils/budgetUtils';
 
-export const useBudget = () => {
-  const [budget] = useState(defaultBudget);
-  const [spent, setSpent] = useState(() => {
-    const saved = localStorage.getItem('currentSpent');
-    return saved ? JSON.parse(saved) : Object.keys(defaultBudget).reduce((acc, key) => ({ ...acc, [key]: 0 }), {});
-  });
-  
-  const [inputValues, setInputValues] = useState(
-    Object.keys(defaultBudget).reduce((acc, key) => ({ ...acc, [key]: '' }), {})
-  );
+export const useBudget = (initialData = {}) => {
+  const [budget, setBudget] = useState({});
+  const [spent, setSpent] = useState({});
+  const [inputValues, setInputValues] = useState({});
   const [history, setHistory] = useState([]);
   const [toast, setToast] = useState(null);
-  const [toastType, setToastType] = useState("success");
+  const [toastType, setToastType] = useState('success');
+  const [monthlyBudget, setMonthlyBudget] = useState(0);
 
   useEffect(() => {
-    const storedHistory = localStorage.getItem('budgetHistory');
-    const storedSpent = localStorage.getItem('currentSpent');
-    const storedInputs = localStorage.getItem('currentInputs');
+    const categories = initialData?.categories || Object.keys(initialData?.budgets || {});
+    const newBudget = {};
+    const newSpent = {};
+    const newInputs = {};
 
-    if (storedHistory) setHistory(JSON.parse(storedHistory));
-    if (storedSpent) setSpent(JSON.parse(storedSpent));
-    if (storedInputs) setInputValues(JSON.parse(storedInputs));
-  }, []);
+    categories.forEach(cat => {
+      newBudget[cat] = initialData.budgets?.[cat] || 0;
+      newSpent[cat] = spent[cat] || 0;
+      newInputs[cat] = inputValues[cat] || '';
+    });
 
-  useEffect(() => {
-    localStorage.setItem('currentSpent', JSON.stringify(spent));
-  }, [spent]);
-
-  useEffect(() => {
-    localStorage.setItem('currentInputs', JSON.stringify(inputValues));
-  }, [inputValues]);
-
-  useEffect(() => {
-    if (toast) {
-      const timer = setTimeout(() => setToast(null), 3000);
-      return () => clearTimeout(timer);
-    }
-  }, [toast]);
+    setMonthlyBudget(initialData.monthlyBudget || 0);
+    setBudget(newBudget);
+    setSpent(newSpent);
+    setInputValues(newInputs);
+    setHistory(initialData.transactions || []);
+  }, [initialData]);
 
   const handleInputChange = (key, value) => {
     setInputValues(prev => ({ ...prev, [key]: value }));
   };
-
+  
   const handleAddExpense = (key) => {
     const value = Number(inputValues[key]);
     if (!value || isNaN(value)) return;
-    const newSpent = { ...spent, [key]: spent[key] + value };
-    setSpent(newSpent);
+  
+    setSpent(prev => ({ ...prev, [key]: prev[key] + value }));
     setInputValues(prev => ({ ...prev, [key]: '' }));
-    setToastType("success");
+    setToastType('success');
     setToast(`💸 Добавен разход от ${value} BGN към "${key}".`);
   };
-
+  
   const closeMonth = () => {
-    const currentMonth = new Date().toLocaleString('bg-BG', { month: 'long', year: 'numeric' });
-    const exists = history.some(entry => entry.month === currentMonth);
-    if (exists) {
+    const currentMonth = new Date().toLocaleString('bg-BG', {
+      month: 'long',
+      year: 'numeric'
+    });
+  
+    if (history.some(h => h.month === currentMonth)) {
       setToastType("warning");
       setToast("📅 Този месец вече е затворен.");
       return;
     }
-
+  
     const totals = calculateTotals(budget, spent);
     const newEntry = {
       timestamp: new Date().toLocaleString('bg-BG'),
@@ -72,21 +63,21 @@ export const useBudget = () => {
       spent,
       ...totals
     };
-
+  
     const updatedHistory = [...history, newEntry];
     setHistory(updatedHistory);
     localStorage.setItem('budgetHistory', JSON.stringify(updatedHistory));
     setToastType("success");
     setToast("📁 Месецът беше успешно затворен.");
   };
-
+  
   const deleteEntry = (indexToRemove) => {
     const updated = history.filter((_, idx) => idx !== indexToRemove);
     setHistory(updated);
     localStorage.setItem('budgetHistory', JSON.stringify(updated));
     setToastType("success");
     setToast("🗑️ Месецът беше изтрит.");
-  };
+  };  
 
   return {
     budget,
@@ -98,6 +89,7 @@ export const useBudget = () => {
     handleInputChange,
     handleAddExpense,
     closeMonth,
-    deleteEntry
+    deleteEntry,
+    monthlyBudget
   };
-}; 
+};
