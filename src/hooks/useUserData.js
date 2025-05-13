@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
 
 export const useUserData = (refreshKey = 0) => {
   const [userData, setUserData] = useState(null);
@@ -8,38 +8,39 @@ export const useUserData = (refreshKey = 0) => {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      setLoading(true);
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        setUserData(null);
+      const user = auth.currentUser;
+      if (!user) {
         setLoading(false);
         return;
       }
 
-      const userRef = doc(db, 'users', uid);
-      const docSnap = await getDoc(userRef);
+      try {
+        const userRef = doc(db, 'users', user.uid);
+        const docSnap = await getDoc(userRef);
 
-      if (docSnap.exists()) {
-        setUserData(docSnap.data());
-      } else {
-        // 👇 Initialize empty document for first-time users
-        const emptyUser = {
-          salary: 0,
-          monthlyBudget: 0,
-          categories: [],
-          budgets: {},
-          transactions: [],
-          onboardingComplete: false
-        };
-
-        await setDoc(userRef, emptyUser);
-        setUserData(emptyUser);
+        if (docSnap.exists()) {
+          setUserData(docSnap.data());
+        } else {
+          setUserData(null); // Or handle onboarding
+        }
+      } catch (err) {
+        console.error('Error fetching user data:', err);
+        setUserData(null);
+      } finally {
+        setLoading(false);
       }
-
-      setLoading(false);
     };
 
-    fetchUserData();
+    // Ensure auth is ready
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) fetchUserData();
+      else {
+        setUserData(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, [refreshKey]);
 
   return { userData, loading };

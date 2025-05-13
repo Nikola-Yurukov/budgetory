@@ -21,15 +21,19 @@ export function BudgetTracker() {
   const [refreshKey, setRefreshKey] = useState(0);
   const { userData, loading } = useUserData(refreshKey);
 
+
+
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setUser(user);
-      if (!user) {
+    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+      if (!firebaseUser) {
         navigate('/login');
+      } else {
+        setUser(firebaseUser);
       }
     });
     return () => unsubscribe();
   }, [navigate]);
+  
 
   const initialData = useMemo(() => ({
     budgets: userData?.budgets || {},
@@ -88,8 +92,9 @@ export function BudgetTracker() {
     }
   };
 
-  if (loading || userData == null) return <div>Зареждане...</div>;
-
+  if (!user) return <div>Зареждане на профила...</div>;
+  if (loading || !userData) return <div>Зареждане...</div>;  
+  
   if (showSettings) return <Onboarding onComplete={handleSettingsComplete} />;
   
   if (!userData.onboardingComplete) return <Onboarding onComplete={handleSettingsComplete} />;
