@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { calculateTotals } from '../utils/budgetUtils';
+import { auth, db } from "../firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export const useBudget = (initialData = {}) => {
   const [budget, setBudget] = useState({});
@@ -16,10 +18,18 @@ export const useBudget = (initialData = {}) => {
     const newSpent = {};
     const newInputs = {};
 
+    const calculatedSpent = {};
+    (initialData.transactions || []).forEach(tx => {
+      if (!calculatedSpent[tx.category]) {
+        calculatedSpent[tx.category] = 0;
+      }
+      calculatedSpent[tx.category] += tx.amount;
+    });
+
     categories.forEach(cat => {
       newBudget[cat] = initialData.budgets?.[cat] || 0;
-      newSpent[cat] = spent[cat] || 0;
-      newInputs[cat] = inputValues[cat] || '';
+      newSpent[cat] = calculatedSpent[cat] || 0;
+      newInputs[cat] = '';
     });
 
     setMonthlyBudget(initialData.monthlyBudget || 0);
@@ -32,29 +42,53 @@ export const useBudget = (initialData = {}) => {
   const handleInputChange = (key, value) => {
     setInputValues(prev => ({ ...prev, [key]: value }));
   };
-  
-  const handleAddExpense = (key) => {
-    const value = Number(inputValues[key]);
+
+  const handleAddExpense = async (category) => {
+    const value = inputValues[category];
     if (!value || isNaN(value)) return;
-  
-    setSpent(prev => ({ ...prev, [key]: prev[key] + value }));
-    setInputValues(prev => ({ ...prev, [key]: '' }));
-    setToastType('success');
-    setToast(`💸 Добавен разход от ${value} BGN към "${key}".`);
+
+    const uid = auth.currentUser?.uid;
+    if (!uid) return;
+
+    const newTransaction = {
+      category,
+      amount: Number(value),
+      timestamp: Date.now(),
+    };
+
+    try {
+      const userRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(userRef);
+      const existingData = docSnap.data();
+      const currentTransactions = existingData.transactions || [];
+
+      await updateDoc(userRef, {
+        transactions: [...currentTransactions, newTransaction],
+      });
+
+      setInputValues(prev => ({ ...prev, [category]: '' }));
+      setSpent(prev => ({
+        ...prev,
+        [category]: (prev[category] || 0) + Number(value)
+      }));
+      setHistory(prev => [...prev, newTransaction]);
+    } catch (err) {
+      console.error('Failed to save transaction:', err);
+    }
   };
-  
+
   const closeMonth = () => {
     const currentMonth = new Date().toLocaleString('bg-BG', {
       month: 'long',
       year: 'numeric'
     });
-  
+
     if (history.some(h => h.month === currentMonth)) {
       setToastType("warning");
       setToast("📅 Този месец вече е затворен.");
       return;
     }
-  
+
     const totals = calculateTotals(budget, spent);
     const newEntry = {
       timestamp: new Date().toLocaleString('bg-BG'),
@@ -63,21 +97,21 @@ export const useBudget = (initialData = {}) => {
       spent,
       ...totals
     };
-  
+
     const updatedHistory = [...history, newEntry];
     setHistory(updatedHistory);
     localStorage.setItem('budgetHistory', JSON.stringify(updatedHistory));
     setToastType("success");
     setToast("📁 Месецът беше успешно затворен.");
   };
-  
+
   const deleteEntry = (indexToRemove) => {
     const updated = history.filter((_, idx) => idx !== indexToRemove);
     setHistory(updated);
     localStorage.setItem('budgetHistory', JSON.stringify(updated));
     setToastType("success");
     setToast("🗑️ Месецът беше изтрит.");
-  };  
+  };
 
   return {
     budget,

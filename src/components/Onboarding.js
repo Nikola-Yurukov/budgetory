@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../firebase';
 import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { auth } from '../firebase';
@@ -9,7 +9,50 @@ export function Onboarding({ onComplete }) {
   const [categories, setCategories] = useState([{ name: '', budget: '' }]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [deletedCategories, setDeletedCategories] = useState([]);
+  const [hasChanges, setHasChanges] = useState(false);
+  const [existingData, setExistingData] = useState({});
+
+  useEffect(() => {
+    const fetchExisting = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      const userRef = doc(db, 'users', uid);
+      const docSnap = await getDoc(userRef);
+      if (!docSnap.exists()) return;
+
+      const data = docSnap.data();
+      if (data?.onboardingComplete && !onComplete) return;
+      setExistingData(data);
+      setSalary(data.salary?.toString() || '');
+      setMonthlyBudget(data.monthlyBudget?.toString() || '');
+      const formattedCategories = (data.categories || []).map(cat => ({
+        name: cat,
+        budget: data.budgets?.[cat]?.toString() || ''
+      }));
+      if (formattedCategories.length > 0) {
+        setCategories(formattedCategories);
+      }
+    };
+    fetchExisting();
+  }, [onComplete]);
+
+  useEffect(() => {
+    const formCategoryNames = categories.map(cat => cat.name);
+    const existingCategories = existingData.categories || [];
+    const categoriesChanged = existingCategories.length !== formCategoryNames.length ||
+      !existingCategories.every(name => formCategoryNames.includes(name));
+
+    const salaryChanged = salary !== '' && Number(salary) !== existingData.salary;
+    const budgetChanged = monthlyBudget !== '' && Number(monthlyBudget) !== existingData.monthlyBudget;
+
+    const budgetValuesChanged = categories.some(cat => {
+      const existingBudget = existingData.budgets?.[cat.name]?.toString() || '';
+      return cat.budget !== existingBudget;
+    });
+
+    setHasChanges(salaryChanged || budgetChanged || categoriesChanged || budgetValuesChanged);
+  }, [salary, monthlyBudget, categories, existingData]);
 
   const handleAddCategory = () => {
     setCategories([...categories, { name: '', budget: '' }]);
@@ -52,6 +95,15 @@ export function Onboarding({ onComplete }) {
     }
   };
 
+  const handleClose = () => {
+    if (hasChanges) {
+      if (!window.confirm("Имате незапазени промени. Искате ли да ги отхвърлите и да продължите?")) {
+        return;
+      }
+    }
+    if (onComplete) onComplete();
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -80,12 +132,12 @@ export function Onboarding({ onComplete }) {
       });
 
       await setDoc(userRef, {
-        salary: Number(salary || existingData.salary || 0),
-        monthlyBudget: Number(monthlyBudget || existingData.monthlyBudget || 0),
+        salary: salary !== '' ? Number(salary) : existingData.salary || 0,
+        monthlyBudget: monthlyBudget !== '' ? Number(monthlyBudget) : existingData.monthlyBudget || 0,
         budgets: newBudgets,
         categories: Array.from(newCategories),
         onboardingComplete: true
-      }, { merge: true });          
+      }, { merge: true });
 
       if (onComplete) onComplete();
     } catch (err) {
@@ -97,7 +149,14 @@ export function Onboarding({ onComplete }) {
   };
 
   return (
-    <div className="p-4">
+    <div className="p-4 relative">
+      <button
+        onClick={handleClose}
+        className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-xl"
+        title="Затвори"
+      >
+        ✖
+      </button>
       <h2 className="text-xl font-bold mb-4">🎯 Моят бюджет</h2>
       <form onSubmit={handleSubmit}>
         <label className="block mb-2 font-medium">Месечна заплата:</label>
@@ -150,8 +209,16 @@ export function Onboarding({ onComplete }) {
           <button type="button" onClick={handleAddCategory} className="text-blue-600">
             ➕ Добави категория
           </button>
-          <button type="submit" disabled={saving} className="bg-green-600 text-white px-4 py-2 rounded">
-            {saving ? 'Запазване...' : '💾 Запази'}
+          <button
+            type="submit"
+            disabled={!hasChanges}
+            className={`w-full py-2 px-4 rounded ${
+              hasChanges
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+            } transition`}
+          >
+            💾 Запази
           </button>
         </div>
 

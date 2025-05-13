@@ -88,18 +88,13 @@ export function BudgetTracker() {
     }
   };
 
-  if (loading) return <div>Зареждане...</div>;
+  if (loading || userData == null) return <div>Зареждане...</div>;
 
-  const isFirstTime = (
-    (!userData?.salary || userData.salary === 0) &&
-    (!userData?.monthlyBudget || userData.monthlyBudget === 0) &&
-    (!userData?.categories || userData.categories.length === 0)
-  );
-
-  if (isFirstTime || showSettings) {
-    return <Onboarding onComplete={handleSettingsComplete} />;
-  }
-
+  if (showSettings) return <Onboarding onComplete={handleSettingsComplete} />;
+  
+  if (!userData.onboardingComplete) return <Onboarding onComplete={handleSettingsComplete} />;
+  
+  
   const {
     totalBudget,
     totalSpent,
@@ -151,7 +146,7 @@ export function BudgetTracker() {
         </div>
 
         <div className="w-full flex justify-center my-4">
-          <div className="w-full max-w-xs sm:max-w-md">
+          <div className="w-full max-w-xs sm:max-w-xl">
             <BudgetChart data={spent} />
           </div>
         </div>

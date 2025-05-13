@@ -1,39 +1,28 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { auth, db } from '../firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { auth } from '../firebase';
 
 export const useUserData = (refreshKey = 0) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      setLoading(true);
-      const uid = auth.currentUser?.uid;
-      if (!uid) {
-        setUserData(null);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const docRef = doc(db, 'users', uid);
-        const snapshot = await getDoc(docRef);
-        if (snapshot.exists()) {
-          setUserData(snapshot.data());
-        } else {
-          setUserData(null);
+    const unsubscribe = auth.onAuthStateChanged(async (user) => {
+      if (user?.uid) {
+        try {
+          const userRef = doc(db, 'users', user.uid);
+          const docSnap = await getDoc(userRef);
+          if (docSnap.exists()) {
+            setUserData(docSnap.data());
+          }
+        } catch (err) {
+          console.error('Error fetching user data:', err);
         }
-      } catch (err) {
-        console.error('Error fetching user data:', err);
-        setUserData(null);
-      } finally {
-        setLoading(false);
       }
-    };
+      setLoading(false); // Make sure loading ends in any case
+    });
 
-    fetchUserData();
+    return () => unsubscribe();
   }, [refreshKey]);
 
   return { userData, loading };
