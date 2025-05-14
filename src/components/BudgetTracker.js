@@ -22,15 +22,22 @@ export function BudgetTracker() {
   const { userData, loading } = useUserData(refreshKey);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((firebaseUser) => {
+    const unsubscribe = auth.onAuthStateChanged(async (firebaseUser) => {
       if (!firebaseUser) {
         navigate('/login');
       } else {
         setUser(firebaseUser);
+        // ✅ Load "guideSeen" from localStorage
+        const guideSeen = localStorage.getItem('guideSeen');
+        if (!guideSeen) {
+          setShowGuide(true); // first login, show guide
+        } else {
+          setShowGuide(false); // returning user, skip
+        }
       }
     });
     return () => unsubscribe();
-  }, [navigate]);
+  }, [navigate]);  
 
   const [guidePosition, setGuidePosition] = useState({ top: 0, left: 0 });
 
@@ -132,18 +139,27 @@ useEffect(() => {
       setCurrentStep(prev => prev + 1);
     } else {
       setShowGuide(false);
+      localStorage.setItem('guideSeen', 'true'); // ✅ Mark as completed
     }
-  };
+  };  
 
   return (
     <div className="max-w-2xl  mx-auto px-4 py-6 font-sans">
-      <header className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">📊 Твоят месечен бюджет</h1>
-        <div className="flex items-center gap-3">
+      <header className="w-full bg-white px-4 py-3 flex justify-between items-center" data-guide-id="header"> 
+      <div className="flex gap-2 justify-center flex-1">
           <button
             onClick={() => setShowSettings(true)}
             className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300"
           >⚙️ Настройки</button>
+                  <button
+  onClick={() => {
+    setCurrentStep(0);
+    setShowGuide(true);
+  }}
+  className="bg-gray-200 text-gray-800 px-3 py-1 rounded hover:bg-gray-300"
+>
+  ❓ Помощ
+</button>
           <button
             onClick={async () => { await signOut(auth); navigate('/login'); }}
             className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
@@ -175,8 +191,8 @@ useEffect(() => {
 
       <h2 className="text-center text-gray-600 mb-4">Месец: {currentMonth}</h2>
       <p className="text-center text-sm text-gray-500 mb-4">
-        📅 Остават {remainingDays} дни · Можеш да харчиш до {formatCurrency(dailyAllowance)} на ден
-      </p>
+  📅 Остават {remainingDays} дни до края на месеца: · Ако харчиш до {formatCurrency(dailyAllowance)} на ден, ще спестиш {formatCurrency(userData.salary - userData.monthlyBudget)}
+</p>
 
       <div className="bg-white rounded shadow p-4 space-y-3 text-center">
         <p className="text-green-700 font-semibold">📗 Остатък от заплата: {formatCurrency(userData.salary - totalSpent)} от {formatCurrency(userData.salary)}</p>
