@@ -193,8 +193,6 @@ useEffect(() => {
             <div className="bg-purple-500 h-2 rounded-full" style={{ width: `${salaryPercent}%` }}></div>
           </div>
         </div>
-
-        <p className={`font-bold ${monthlySurplus < 0 ? 'text-red-600' : 'text-green-600'}`}>💰 Нетен месечен резултат: {formatCurrency(monthlySurplus)}</p>
       </div>
 
       {overspendingWarnings.length > 0 && (
