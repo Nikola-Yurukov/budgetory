@@ -149,7 +149,7 @@ export function Onboarding({ onComplete }) {
   };
 
   return (
-    <div className="p-4 relative">
+    <div className="max-w-md mx-auto mt-10 bg-white rounded-xl shadow-lg p-4 relative">
       <button
         onClick={handleClose}
         className="absolute top-2 right-2 text-red-600 hover:text-red-800 text-xl"
@@ -166,7 +166,7 @@ export function Onboarding({ onComplete }) {
           onChange={(e) => setSalary(e.target.value)}
           className="w-full border px-2 py-1 mb-4"
         />
-
+  
         <label className="block mb-2 font-medium">Общ месечен бюджет:</label>
         <input
           type="number"
@@ -174,7 +174,7 @@ export function Onboarding({ onComplete }) {
           onChange={(e) => setMonthlyBudget(e.target.value)}
           className="w-full border px-2 py-1 mb-4"
         />
-
+  
         <h3 className="font-semibold mb-2">Категории:</h3>
         {categories.map((cat, index) => (
           <div key={index} className="flex gap-2 mb-2 items-center">
@@ -204,7 +204,7 @@ export function Onboarding({ onComplete }) {
             </button>
           </div>
         ))}
-
+  
         <div className="flex flex-wrap items-center gap-4 mb-4">
           <button type="button" onClick={handleAddCategory} className="text-blue-600">
             ➕ Добави категория
@@ -221,9 +221,10 @@ export function Onboarding({ onComplete }) {
             💾 Запази
           </button>
         </div>
-
+  
         {error && <div className="text-red-600 mb-2">{error}</div>}
       </form>
     </div>
   );
+  
 }
